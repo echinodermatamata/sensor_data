@@ -1,0 +1,190 @@
+---
+output: github_document
+---
+
+
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = '60%', 
+  fig.align='center',
+  warning = FALSE, 
+  message= FALSE
+)
+```
+
+# hemispheR
+
+
+The `hemispheR` package allows processing digital [hemispherical](https://en.wikipedia.org/wiki/Hemispherical_photography) (also called fisheye) images (either circular or fullframe) of forest canopies to retrieve canopy attributes like [canopy openness](https://www.ecologycenter.us/forest-ecology/measuring-canopy-closure.html) and leaf area index ([LAI](https://en.wikipedia.org/wiki/Leaf_area_index)).
+
+## Installation
+
+You can install `hemispheR` from CRAN:
+
+```{r, eval=F}
+install.packages('hemispheR')
+```
+
+You can install the development version of `hemispheR` using `devtools`:
+
+```{r eval=F}
+# install.packages("devtools")
+devtools::install_git("https://gitlab.com/fchianucci/hemispheR")
+```
+
+# Import a fisheye image
+
+A distinct feature of (circular) hemispherical images is that a circular mask should be applied to exclude outer pixels from analyses.
+
+```{r, echo=F, message=F, warning=F}
+library(hemispheR)
+image<-'~/Desktop/heat/canopy/asc_hopkins.jpeg'
+terra::plotRGB(terra::rast(image))
+```
+
+The `import_fisheye()` function allows importing fisheye images as:
+
+```{r, message=T, warning=F}
+img<-import_fisheye(image,
+                    channel = 3,
+                    #circ.mask=list(xc=2592,yc=1944,rc=1750), NOTE un# this will allow you to adjust the circular mask on the image-- you may need to play with this to get a good estimate of L 
+                    circular=TRUE,
+                    gamma=2.2,
+                    stretch=FALSE,
+                    display=TRUE,
+                    message=TRUE)
+```
+
+The function has the following parameters:\
+- *filename*: the input image name; any kind of image (i.e., raster matrix) can be read using `terra::rast()` functionality;\
+- *channel*: the band number (Default value is 3, corresponding to blue channel in RGB images, which can be equivalently selected as 'B'). Mixing channel options are also available such as 'GLA', 'Luma', '2BG', 'GEI', 'RGB', see explanations later;\
+- *circ.mask*: a list of three-parameters (x-center (xc), y-center (yc), radius (rc)) needed to apply a circular mask. These parameters can be also derived using the `camera_fisheye()` function for known camera+lenses. If missing, they are automatically calculated;\
+- *circular*: it allows to specify if the fisheye image is circular (*circular*=TRUE) or fullframe (*circular*=FALSE) type; it affects the way the radius (rc) is calculated in case *circ.mask* is omitted;\
+- *gamma*: the actual gamma of the image, which is then back-corrected. Default value is 2.2, as typical of most image formats (e.g. jpeg images). If no gamma correction is required, just write *gamma*=1;\
+- *stretch*: optionally, users can decide to apply a linear stretch to the select image channel, to enhance contrast;\
+- *display*: if TRUE, a plot of the imported image is displayed along with the circular mask applied;\
+- *message*: if TRUE, a message about the mask parameters applied to image is printed.
+
+
+# Classify images
+
+Once imported, the function performs image classification using a single automated thresholding from the `auto_thresh()` functionality of the [autothresholdr](https://CRAN.R-project.org/package=autothresholdr) package:
+
+```{r, message=F, warning=F}
+img.bw<-binarize_fisheye(img,
+                         method='Otsu',
+                         zonal=FALSE,
+                         manual=NULL,
+                         display=TRUE,
+                         export=FALSE)
+
+```
+
+Where:\
+- *img*: is the input single-channel raster generated from `import_fisheye()`;\
+- *method*: is the automated thresholding method. Default is set to 'Otsu'; for For other methods, see: <https://imagej.net/plugins/auto-threshold>;\
+- *zonal*: if set to TRUE, it divides the image in four sectors (NE,SE,SW,NW directions) and applies an automated classification separatedly to each region; useful in case of uneven light conditions in the image;\
+- *manual*: alternatively to the automated method, users can insert a numeric threshold value; in this case, manual thresholding overrides automated classification;\
+- *display*: if set to TRUE, a plot of the classified image is displayed;\
+- *export*: if set tot TRUE, a binary jpeg image is stored in a "result" folder.
+
+
+# Extract gap fraction from binary images
+
+The `gapfrac_fisheye()` function retrieve the angular distribution from classified fisheye images, considering the fisheye lens correction, as:
+
+```{r}
+gap.frac<-gapfrac_fisheye(
+  img.bw,
+  maxVZA = 90,
+  #lens = "FC-E8",
+  startVZA = 0,
+  endVZA = 70,
+  nrings = 7,
+  nseg = 8,
+  display=TRUE,
+  message = FALSE
+)
+head(gap.frac)
+```
+
+where:\
+- *img.bw*: is the input single-channel binary image generated from `binarize_fisheye()`;\
+- *maxVZA*: is the maximum zenith angle (degree) corresponding to the radius; it is used to perform lens correction. Default value is set to 90;\
+- *startVZA*: is the lower zenith angle (degree) used for analysis. Default values is set to 0;\
+- *endVZA*: is the upper zenith angle (degree) used for analysis. Default value is set to 70;\
+- *lens*: define the lens type used for correcting fisheye distortion; see `list.lenses` for a list of various fisheye lens available. If omitted, an equidistant projection is assumed by default;\
+- *nrings*: number of zenith rings;\
+- *nseg*: number of azimuth sectors;\
+- *display*: if set to TRUE, it overlaids the image with the zenith and azimuth bins;\
+- *message*: if set to TRUE, it reports the applied mask used in the analysis.
+
+A suggested setting for comparability with LAI-2000/2200 Plant Canopy Analyzer (five rings, each about 15 degrees in size) is:
+
+```{r}
+gap.frac2<-gapfrac_fisheye(
+  img.bw,
+  maxVZA = 90,
+  lens = "FC-E8",
+  startVZA = 0,
+  endVZA = 75,
+  nrings = 5,
+  nseg = 8,
+  display=TRUE,
+  message = FALSE
+)
+```
+
+With this setting the *Le* is comparable with the apparent *L* derived from LAI-2000/2200 (see [Chianucci et al. 2015](https://doi.org/10.1007/s00468-014-1115-x)).
+
+A suggested setting for implementing the hinge angle method (Bonhomme and Chartier 1972), which uses a fixed restricted view angle centered at 1 radian - about 57 degree, is:
+
+```{r}
+gap.frac3<-gapfrac_fisheye(
+  img.bw,
+  maxVZA = 90,
+  lens = "FC-E8",
+  startVZA = 55,
+  endVZA = 60,
+  nrings = 1,
+  nseg = 8,
+  display=TRUE,
+  message = FALSE
+)
+```
+
+
+All these algorithms are applied by simply typing:
+
+```{r}
+canopy<-canopy_fisheye(gap.frac2)
+canopy
+```
+
+# References
+
+Arietta, A.A., 2022. Estimation of forest canopy structure and understory light using spherical panorama images from smartphone photography. Forestry, 95(1), pp.38-48. <https://doi.org/10.1093/forestry/cpab034>
+
+Bonhomme, R. and Chartier, P., 1972. The interpretation and automatic measurement of hemispherical photographs to obtain sunlit foliage area and gap frequency. Israel Journal of Agricultural Research, 22, pp.53-61. 
+
+Campbell, G.S., 1986. Extinction coefficients for radiation in plant canopies calculated using an ellipsoidal inclination angle distribution. Agricultural and forest meteorology, 36(4), pp.317-321. [https://doi.org/10.1016/0168-1923(86)90010-9](https://doi.org/10.1016/0168-1923(86)90010-9){.uri}
+
+Chianucci, F., Macfarlane, C., Pisek, J., Cutini, A. and Casa, R., 2015. Estimation of foliage clumping from the LAI-2000 Plant Canopy Analyzer: effect of view caps. Trees, 29(2), pp.355-366. <https://doi.org/10.1007/s00468-014-1115-x>
+
+Chianucci, F., Zou, J., Leng, P., Zhuang, Y. and Ferrara, C., 2019. A new method to estimate clumping index integrating gap fraction averaging with the analysis of gap size distribution. Canadian Journal of Forest Research, 49(5), pp.471-479. <https://doi.org/10.1139/cjfr-2018-0213>
+
+Chianucci, F. and Macek, M., 2023. hemispheR: an R package for fisheye canopy image analysis. Agricultural and Forest Meteorology, 336, p.109470. <https://doi.org/10.1016/j.agrformet.2023.109470>
+
+Landini, G., Randell, D.A., Fouad, S. and Galton, A., 2017. Automatic thresholding from the gradients of region boundaries. Journal of microscopy, 265(2), pp.185-195. <https://doi.org/10.1111/jmi.12474>
+
+Lang, A.R.G. and Xiang, Y., 1986. Estimation of leaf area index from transmission of direct sunlight in discontinuous canopies. Agricultural and forest Meteorology, 37(3), pp.229-243. [https://doi.org/10.1016/0168-1923(86)90033-X](https://doi.org/10.1016/0168-1923(86)90033-X){.uri}
+
+Louhaichi, M., Borman, M.M. and Johnson, D.E., 2001. Spatially located platform and aerial photography for documentation of grazing impacts on wheat. Geocarto International, 16(1), pp.65-70. <https://doi.org/10.1080/10106040108542184>
+
+Miller, J.B. A formula for average foliage density. Australian Journal of Botany, 15 (1967), pp. 141-144
+
+Norman, J.M. and Campbell, G.S., 1989. Canopy structure. In Plant physiological ecology: field methods and instrumentation (pp. 301-325). Dordrecht: Springer Netherlands. <https://doi.org/10.1007/978-94-009-2221-1_14>

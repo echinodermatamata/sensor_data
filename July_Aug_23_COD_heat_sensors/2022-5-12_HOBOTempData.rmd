@@ -1,0 +1,391 @@
+---
+title: "CRP City of Decatur Hobo temps_ August 2023"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+
+
+library(ggplot2)
+library(tidyverse)
+library(lubridate)
+
+```
+## Read in data
+Stationary HOBO U23 sensor data from interior and exterior/edge of Lullwater Forest and the Outdoor Activity center - late June - early Aug 2021.
+```{r echo=FALSE, include = FALSE}
+
+
+
+ASCQuad <- read.csv("~/Desktop/July_Aug_23_COD_heat_sensors/ASC_quad.csv")
+head(ASCQuad)
+type<-factor("Sun")
+location<-factor("I")
+
+#rename variables and add columns for serial no, location, type (Sun or Shade)
+ASCQuad<- data.frame(ASCQuad,type,location)
+head(ASCQuad)
+
+##########
+DecaturFirst <- read.csv("~/Desktop/July_Aug_23_COD_heat_sensors/Decatur_First.csv")
+head(DecaturFirst)
+type<-factor("Sun")
+location<-factor("I")
+
+#rename variables and add columns for serial no, location, type (Sun or Shade)
+DecaturFirst<- data.frame(DecaturFirst,type,location)
+head(DecaturFirst)
+
+
+##########
+Cemetery <- read.csv("~/Desktop/July_Aug_23_COD_heat_sensors/Decatur_First.csv")
+head(Cemetery)
+type<-factor("Shade")
+location<-factor("R-60")
+
+#rename variables and add columns for serial no, location, type (Sun or Shade)
+Cemetery<- data.frame(Cemetery,type,location)
+head(Cemetery)
+
+MARTA <- read.csv("~/Desktop/July_Aug_23_COD_heat_sensors/Deer_and_Dove.csv")
+head(MARTA)
+type<-factor("Sun")
+location<-factor("C-2")
+
+#rename variables and add columns for serial no, location, type (Sun or Shade)
+MARTA<- data.frame(MARTA,type,location)
+head(MARTA)
+
+
+DHSHoward <- read.csv("~/Desktop/July_Aug_23_COD_heat_sensors/DHS_howard.csv")
+head(DHSHoward)
+type<-factor("Sun")
+location<-factor("I")
+
+#rename variables and add columns for serial no, location, type (Sun or Shade)
+DHSHoward<- data.frame(DHSHoward,type,location)
+head(DHSHoward)
+
+Harmony <- read.csv("~/Desktop/July_Aug_23_COD_heat_sensors/Harmony_park.csv")
+head(Harmony)
+type<-factor("Sun")
+location<-factor("C-1")
+
+#rename variables and add columns for serial no, location, type (Sun or Shade)
+Harmony<- data.frame(Harmony,type,location)
+head(Harmony)
+
+DHSBioswale <- read.csv("~/Desktop/July_Aug_23_COD_heat_sensors/High_School_BioSwale.csv")
+head(DHSBioswale)
+type<-factor("Shade")
+location<-factor("I")
+
+#rename variables and add columns for serial no, location, type (Sun or Shade)
+DHSBioswale <- data.frame(DHSBioswale ,type,location)
+head(DHSBioswale )
+
+
+OakhurstPark <- read.csv("~/Desktop/July_Aug_23_COD_heat_sensors/Oakhurst_park.csv")
+head(OakhurstPark)
+type<-factor("Shade")
+location<-factor("R-60")
+
+#rename variables and add columns for serial no, location, type (Sun or Shade)
+OakhurstPark <- data.frame(OakhurstPark ,type,location)
+head(OakhurstPark )
+
+
+StThomasMoore <- read.csv("~/Desktop/July_Aug_23_COD_heat_sensors/STM.csv")
+head(StThomasMoore)
+type<-factor("Sun")
+location<-factor("I")
+
+#rename variables and add columns for serial no, location, type (Sun or Shade)
+StThomasMoore <- data.frame(StThomasMoore ,type,location)
+head(StThomasMoore )
+
+
+Talley <- read.csv("~/Desktop/July_Aug_23_COD_heat_sensors/Talley.csv")
+head(Talley)
+type<-factor("Sun")
+location<-factor("I")
+
+#rename variables and add columns for serial no, location, type (Sun or Shade)
+Talley <- data.frame(Talley ,type,location)
+head(Talley)
+
+ToyPark <- read.csv("~/Desktop/July_Aug_23_COD_heat_sensors/Toy_Park.csv")
+head(ToyPark)
+type<-factor("Shade")
+location<-factor("I")
+
+#rename variables and add columns for serial no, location, type (Sun or Shade)
+ToyPark <- data.frame(ToyPark ,type,location)
+head(ToyPark)
+
+
+#OACForest <- read.csv("C:/Users/ckeogh/Documents/HOBOware/TempData2021/Aug/OAC1Interior_6-29-21_8-19-21.csv")
+#head(OACForest)
+#type<-factor("Forest")
+#location<-factor("OAC")
+
+#rename variables and add columns for serial no, location, type (forest or edge)
+#oacF<- data.frame(OACForest,type,location)
+#head(oacF)
+
+#OAC Edge dataset with type = edge and add location
+#OACEdge <- read.csv("C:/Users/ckeogh/Documents/HOBOware/TempData2021/Aug/OAC2Exterior_7-7-21_8-19-21.csv")
+#type<-factor("Edge")
+#location<-factor("OAC")
+#oacEdge<- data.frame(OACEdge,type,location)
+
+
+#Lullwater datasets
+#LullwaterEdge <- read.csv("C:/Users/ckeogh/Documents/HOBOware/TempData2021/Aug/LullwaterExterior_stonePN4-Emory-4-22-21_0_8-19-21.csv")
+#type<-factor("Edge")
+#location<-factor("Lullwater")
+#lullEdge<- data.frame(LullwaterEdge,type,location)
+
+
+#LullwaterInterior <- read.csv("C:/Users/ckeogh/Documents/HOBOware/TempData2021/Aug/LullwaterInterior1_stoneOH3_6-29-21_8-19-21.csv")
+#type<-factor("Forest")
+#location<-factor("Lullwater")
+#lullF<- data.frame(LullwaterInterior,type,location)
+
+#Fernbank dataset
+#FernbankInterior <- read.csv("C:/Users/ckeogh/Documents/HOBOware/TempData2021/Aug/FernbankSlope_7.10.21_8-19-21.csv")
+#type<-factor("Forest")
+#location<-factor("Fernbank")
+#fernF<- data.frame(FernbankInterior,type,location)
+
+ls(Cemetery)
+
+Cemetery <- Cemetery %>%
+  select(X., Date.Time..EST.EDT., Ch.1...Temperature.....C., Ch.2...RH......, Dew.Point.....C., type, location )
+
+DecaturFirst <- DecaturFirst %>%
+  select(X., Date.Time..EST.EDT., Ch.1...Temperature.....C., Ch.2...RH......, Dew.Point.....C., type, location )
+
+##Concatenate all 4 datasets by row
+alldata <- as.data.frame(rbind(ASCQuad, Cemetery,DecaturFirst,DHSBioswale,DHSHoward,Harmony,MARTA, OakhurstPark, StThomasMoore,Talley, ToyPark))
+
+
+
+alldata$Date.Time..EST.EDT. <- mdy_hms(alldata$Date.Time..EST.EDT.)
+str(alldata)
+
+
+#alldata$longdate <- parse_date_time(alldata$Date.Time..EST.EDT., orders = mdy)
+
+#class(alldata$Date.Time..EST.EDT.)
+#alldata$longdate <- mdy(alldata$Date.Time..EST.EDT.)
+
+#alldata$longdate<- as_datetime(alldata$Date.Time..EST.EDT., format = "mdy_hms")
+#str(alldata)
+
+#https://rpubs.com/cgb-grupstra/moorea-hobo-20190314
+#IF need to separate time and date into 2 columns
+hobotemplongdate <- tidyr::separate(alldata, 'Date.Time..EST.EDT.',
+                                    into = c('longdate', 'time'),
+                                   sep= ' ') 
+
+head(hobotemplongdate)
+
+
+
+hobotemplongdate$longdate <- as.Date(hobotemplongdate$longdate)
+
+
+
+```
+
+## Plotting across dates 
+using code from https://rpubs.com/cgb-grupstra/moorea-hobo-20190314
+```{r echo=FALSE}
+
+ntempgraph <- ggplot(data=hobotemplongdate, 
+    aes(x=longdate, 
+    y=Ch.1...Temperature.....C.)) +
+    geom_point(size=1, alpha = 1/10)+ theme_bw()+
+    facet_grid(cols=vars(location))+ 
+    theme(axis.text.x = element_text(angle=65, margin = margin(t=20, r=100)))+
+    labs(title="Raw temperature data", y="Temperature (°C)", x="Date")+
+    guides(x = guide_axis(angle=65))+
+  scale_x_date(date_breaks = '3 months')
+ntempgraph
+
+
+#install.packages('labeling') 
+#install.packages('farver')
+library(labeling)
+library(farver)
+```
+
+
+```{r include=FALSE}
+
+#separating day/month/year 
+
+hobofull <- hobotemplongdate %>%
+  tidyr::separate('longdate',
+                  into = c('year', 'month', 'day'),
+                  sep= '-',
+                  remove = FALSE)
+head(hobofull)
+```
+
+
+## Daily temps
+Calculating mean temp for each date
+```{r mean temps}
+hobofullmean <- hobofull %>%
+  group_by(year,month, day,type,location,longdate)%>%
+  summarise(meantemp = mean(Ch.1...Temperature.....C.))
+
+head(hobofullmean)
+
+```
+
+## Plotting mean temps
+```{r echo=FALSE}
+
+#hobofullmean$month <- factor(hobofullmean$month, levels=c("06", "07", "08"))
+meanplot <- ggplot(hobofullmean, aes(x=longdate, y=meantemp))+
+  geom_smooth(aes())+
+    geom_point(aes(),alpha = 1/5)+
+  facet_grid(cols=vars(location))+
+    theme_bw()+
+    labs(title= "Daily temperature means", y="Daily mean temperature (°F) with 95% CI", x="Date")+
+    guides(x = guide_axis(angle=65))+
+  scale_x_date(date_breaks = '3 months')
+   
+    
+meanplot
+
+```
+
+## Calculating daily temp ranges and min/max
+```{r temp range}
+
+hobofullrange <- hobofull %>%
+  group_by(year, month, day, type, location, longdate)%>%
+  summarise(min_temp = min(Ch.1...Temperature.....C.), max_temp = max(Ch.1...Temperature.....C.))%>%
+  mutate(range = max_temp-min_temp)
+
+head(hobofullrange, digits=5)
+
+```
+
+## Plotting temp ranges
+```{r echo=FALSE}
+
+rangeplot <- ggplot(data=hobofullrange, 
+                   aes(x=longdate, 
+                       y=range)) +
+  geom_point()+ theme_bw()+
+  theme(axis.text.x = element_text(margin = margin(t=5)))+
+  facet_grid(cols=vars(location))+
+  labs(title="Daily temperature range", y="Daily temperature range (°C) with 95% CI ", x="Date")+
+  guides(x = guide_axis(angle=65))+
+  scale_x_date(date_breaks = '3 months')
+rangeplot
+
+```
+
+## Plotting max and min
+```{r echo=FALSE}
+
+hobofullrange <- hobofull %>%
+  group_by(year, month, day, type, location, longdate)%>%
+  summarise(min_temp = min(Ch.1...Temperature.....C.), max_temp = max(Ch.1...Temperature.....C.))%>%
+ mutate(range = max_temp-min_temp)
+
+minmaxplot <- ggplot(hobofullrange, aes(x=longdate))+
+  geom_point(aes(y=min_temp, color = "blue"))+
+    geom_point(aes(y=max_temp, color = "red"))+
+  facet_grid(cols=vars(location))+
+    theme_bw()+
+    labs(title= "Daily temperature Min/Max", y="Daily Max and Min temperature (°F) with 95% CI", x="Date", color = "Min/Max Temps")+
+   scale_color_manual(labels = c("Daily Min Temp", "Daily Max Temp"), values = c("blue", "red")) +
+    guides(x = guide_axis(angle=65))+
+  scale_x_date(date_breaks = '3 months')
+minmaxplot
+   
+#    geom_point(aes(colour=type),alpha = 1/5)+
+```
+
+## Boxplots - temps per moth by location and type
+median, 25%, 75%, and min and max
+```{r echo=FALSE}
+
+#hobofullrangemeans<- hobofullrange %>%
+#  group_by(year, month,type, location)%>%
+#  summarise(meanrange = mean(range))
+#nrow(hobofullrangemeans)
+
+hrmplot <- ggplot(hobofullmean, aes(x=month, y=meantemp,colour=year))+
+  geom_boxplot() + theme_bw()+
+  facet_grid(cols=vars(location))+
+  labs(title= "Monthly average temps ", y="Temperature (°C)", x="Date") +
+  guides(x = guide_axis(angle=65))
+   
+
+hrmplot
+
+```
+
+```{r}
+# Heat Index
+
+ls(hobotemplongdate)
+
+hobotemplongdate$HI_uncorrected <- -42.379 + 2.04901523* hobotemplongdate$Ch.1...Temperature.....C.+ 10.14333127*hobotemplongdate$Ch.2...RH...... - .22475541*T*hobotemplongdate$Ch.2...RH...... - .00683783*hobotemplongdate$Ch.1...Temperature.....C.*hobotemplongdate$Ch.1...Temperature.....C. - .05481717*hobotemplongdate$Ch.2...RH......*hobotemplongdate$Ch.2...RH...... + .00122874*hobotemplongdate$Ch.1...Temperature.....C.*hobotemplongdate$Ch.1...Temperature.....C.*hobotemplongdate$Ch.2...RH...... + .00085282*hobotemplongdate$Ch.1...Temperature.....C.*hobotemplongdate$Ch.2...RH......*hobotemplongdate$Ch.2...RH...... - .00000199*hobotemplongdate$Ch.1...Temperature.....C.*hobotemplongdate$Ch.1...Temperature.....C.*hobotemplongdate$Ch.2...RH......*hobotemplongdate$Ch.2...RH......
+```
+
+```{r}
+# Heat Index Uncorrected
+
+HIgraph <- ggplot(data=hobotemplongdate, 
+    aes(x=longdate, 
+    y=HI_uncorrected)) +
+    geom_point(size=1, alpha = 1/10)+ theme_bw()+
+    facet_grid(cols=vars(location))+ 
+    theme(axis.text.x = element_text(angle=65, margin = margin(t=20, r=100)))+
+    labs(title="Heat Index Uncorrected", y="Heat Index", x="Date")+
+    guides(x = guide_axis(angle=65))+
+  scale_x_date(date_breaks = '3 months')
+HIgraph
+
+```
+```{r}
+#HI mean
+hobofull <- hobotemplongdate %>%
+  tidyr::separate('longdate',
+                  into = c('year', 'month', 'day'),
+                  sep= '-',
+                  remove = FALSE)
+head(hobofull)
+
+hobofullHI <- hobofull %>%
+  group_by(year,month, day,type,location,longdate)%>%
+  summarise(meanHI_uncorrected = mean(HI_uncorrected))
+
+head(hobofullHI)
+
+HImeanplot <- ggplot(hobofullHI, aes(x=longdate, y=meanHI_uncorrected))+
+  geom_smooth(aes())+
+    geom_point(aes(),alpha = 1/5)+
+  facet_grid(cols=vars(location))+
+    theme_bw()+
+    labs(title= "Daily HI mean", y="Daily mean HI with 95% CI", x="Date")+
+    guides(x = guide_axis(angle=65))+
+  scale_x_date(date_breaks = '3 months')
+   
+    
+HImeanplot
+
+```
+

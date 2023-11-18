@@ -1,0 +1,216 @@
+---
+title: "CRP City of Decatur Hobo temps_ Summer 2023"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+install.packages ("ggplot2")
+install.packages("tidyverse")
+install.packages("lubridate")
+install.packages('labeling') 
+install.packages('farver')
+
+library(labeling)
+library(farver)
+
+library(ggplot2)
+library(tidyverse)
+library(lubridate)
+
+```
+## Read in data
+Stationary HOBO U23 sensor data from Decatur and Agnes Scott Campus.
+```{r echo=FALSE, include = FALSE}
+
+
+# these are the lines of code you will need to read in each .csv data file you have. You will need to know where the actual data file lives, so that may be in the cloud or on your computer and will look different for each person and each data file.
+
+#So, for example for the "asc_sci_quad.csv" on my computer....
+
+soil_asc_alston <- read.csv("~/Desktop/heat/soil/soil_asc_alston.csv")
+head(soil_asc_alston)
+type<-factor("Sun") #You can change this to something else if you think it would be more informative, for this example, I just used "Sun" and "Shade" as a really rough kind of canopy estimate, but we could and should do more with this
+
+
+#rename variables and add columns for zone and type (Sun or Shade) and make it a data frame
+soil_asc_alston<- data.frame(soil_asc_alston,type)
+head(soil_asc_alston)
+
+##########
+#Let's do it again-- again you have to change the data loading code to be consistent with your computer and data file
+soil_asc_soil_regen <- read.csv("~/Desktop/heat/soil/soil_asc_soil_regen.csv") 
+head(soil_asc_soil_regen)
+type<-factor("Shade")
+
+
+#rename variables and add columns for  zone and type (Sun or Shade)
+soil_asc_soil_regen<- data.frame(soil_asc_soil_regen,type)
+head(soil_asc_soil_regen)
+
+## And so on-- you're going to want to load in all the data you are using at this time. You can just copy, paste, and modify the above code to do what you want it to do. 
+
+
+
+
+###############################################################
+# Now you're going to combine all of your dataframes together into one dataset. In the example I gave I just have 2 and this is how I did it. 
+##Concatenate all 4 datasets by row
+alldata <- as.data.frame(rbind(soil_asc_alston, soil_asc_soil_regen))
+
+
+## This line just tells R that Date is a Date in your dataframe
+alldata$Date <- mdy_hms(alldata$Date)
+str(alldata)
+
+
+#IF need to separate time and date into 2 columns
+hobotemplongdate <- tidyr::separate(alldata, 'Date',
+                                    into = c('longdate', 'time'),
+                                   sep= ' ') 
+### The error that you get here is because of the readings that happen at midnight. Time is 0 at midnight and R doesn't know what to do with that-- I haven't solved that problem yet.
+
+head(hobotemplongdate)
+
+
+
+hobotemplongdate$longdate <- as.Date(hobotemplongdate$longdate)
+
+
+
+```
+
+## Plotting across dates 
+using code from https://rpubs.com/cgb-grupstra/moorea-hobo-20190314
+```{r echo=FALSE}
+
+ntempgraph <- ggplot(data=hobotemplongdate, 
+    aes(x=longdate, 
+    y=Temperature)) +
+    geom_point(size=1, alpha = 1/10)+ theme_bw()+
+    facet_grid(cols=vars(type))+ 
+    theme(axis.text.x = element_text(angle=65, margin = margin(t=20, r=100)))+
+    labs(title="Raw temperature data", y="Temperature (°C)", x="Date")+
+    guides(x = guide_axis(angle=65))+
+  scale_x_date(date_breaks = '3 months')
+ntempgraph
+
+
+
+```
+
+
+```{r include=FALSE}
+
+#separating day/month/year 
+
+hobofull <- hobotemplongdate %>%
+  tidyr::separate('longdate',
+                  into = c('year', 'month', 'day'),
+                  sep= '-',
+                  remove = FALSE)
+head(hobofull)
+```
+
+
+## Daily temps
+Calculating mean temp for each date
+```{r mean temps}
+hobofullmean <- hobofull %>%
+  group_by(year,month, day,type,longdate)%>%
+  summarise(meantemp = mean(Temperature))
+
+head(hobofullmean)
+
+```
+
+## Plotting mean temps
+```{r echo=FALSE}
+
+#hobofullmean$month <- factor(hobofullmean$month, levels=c("06", "07", "08"))
+meanplot <- ggplot(hobofullmean, aes(x=longdate, y=meantemp))+
+  geom_smooth(aes())+
+    geom_point(aes(),alpha = 1/5)+
+  facet_grid(cols=vars(type))+
+    theme_bw()+
+    labs(title= "Daily temperature means", y="Daily mean temperature (°F) with 95% CI", x="Date")+
+    guides(x = guide_axis(angle=65))+
+  scale_x_date(date_breaks = '3 months')
+   
+    
+meanplot
+
+```
+
+## Calculating daily temp ranges and min/max
+```{r temp range}
+
+hobofullrange <- hobofull %>%
+  group_by(year, month, day, type, longdate)%>%
+  summarise(min_temp = min(Temperature), max_temp = max(Temperature))%>%
+  mutate(range = max_temp-min_temp)
+
+head(hobofullrange, digits=5)
+
+```
+
+## Plotting temp ranges
+```{r echo=FALSE}
+
+rangeplot <- ggplot(data=hobofullrange, 
+                   aes(x=longdate, 
+                       y=range)) +
+  geom_point()+ theme_bw()+
+  theme(axis.text.x = element_text(margin = margin(t=5)))+
+  facet_grid(cols=vars(type))+
+  labs(title="Daily temperature range", y="Daily temperature range (°C) with 95% CI ", x="Date")+
+  guides(x = guide_axis(angle=65))+
+  scale_x_date(date_breaks = '3 months')
+rangeplot
+
+```
+
+## Plotting max and min
+```{r echo=FALSE}
+
+hobofullrange <- hobofull %>%
+  group_by(year, month, day, type,longdate)%>%
+  summarise(min_temp = min(Temperature), max_temp = max(Temperature))%>%
+ mutate(range = max_temp-min_temp)
+
+minmaxplot <- ggplot(hobofullrange, aes(x=longdate))+
+  geom_point(aes(y=min_temp, color = "blue"))+
+    geom_point(aes(y=max_temp, color = "red"))+
+  facet_grid(cols=vars(type))+
+    theme_bw()+
+    labs(title= "Daily temperature Min/Max", y="Daily Max and Min temperature (°F) with 95% CI", x="Date", color = "Min/Max Temps")+
+   scale_color_manual(labels = c("Daily Min Temp", "Daily Max Temp"), values = c("blue", "red")) +
+    guides(x = guide_axis(angle=65))+
+  scale_x_date(date_breaks = '3 months')
+minmaxplot
+   
+#    geom_point(aes(colour=type),alpha = 1/5)+
+```
+
+## Boxplots - temps per moth by location and type
+median, 25%, 75%, and min and max
+```{r echo=FALSE}
+
+#hobofullrangemeans<- hobofullrange %>%
+#  group_by(year, month,type, location)%>%
+#  summarise(meanrange = mean(range))
+#nrow(hobofullrangemeans)
+
+hrmplot <- ggplot(hobofullmean, aes(x=month, y=meantemp,colour=year))+
+  geom_boxplot() + theme_bw()+
+  facet_grid(cols=vars(type))+
+  labs(title= "Monthly average temps ", y="Temperature (°C)", x="Date") +
+  guides(x = guide_axis(angle=65))
+   
+
+hrmplot
+
+```
+
