@@ -1,0 +1,188 @@
+---
+title: "Aug2021 Hobo forest temps"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+
+library(ggplot2)
+library(tidyverse)
+
+```
+## Read in data
+Stationary HOBO U23 sensor data from interior and exterior/edge of Lullwater Forest and the Outdoor Activity center - late June - early Aug 2021.
+```{r echo=FALSE, include = FALSE}
+
+OACForest <- read.csv("C:/Users/ckeogh/Documents/HOBOware/TempData2021/Aug/OAC1Interior_6-29-21_8-19-21.csv")
+head(OACForest)
+type<-factor("Forest")
+location<-factor("OAC")
+
+#rename variables and add columns for serial no, location, type (forest or edge)
+oacF<- data.frame(OACForest,type,location)
+head(oacF)
+
+#OAC Edge dataset with type = edge and add location
+OACEdge <- read.csv("C:/Users/ckeogh/Documents/HOBOware/TempData2021/Aug/OAC2Exterior_7-7-21_8-19-21.csv")
+type<-factor("Edge")
+location<-factor("OAC")
+oacEdge<- data.frame(OACEdge,type,location)
+
+
+#Lullwater datasets
+LullwaterEdge <- read.csv("C:/Users/ckeogh/Documents/HOBOware/TempData2021/Aug/LullwaterExterior_stonePN4-Emory-4-22-21_0_8-19-21.csv")
+type<-factor("Edge")
+location<-factor("Lullwater")
+lullEdge<- data.frame(LullwaterEdge,type,location)
+
+
+LullwaterInterior <- read.csv("C:/Users/ckeogh/Documents/HOBOware/TempData2021/Aug/LullwaterInterior1_stoneOH3_6-29-21_8-19-21.csv")
+type<-factor("Forest")
+location<-factor("Lullwater")
+lullF<- data.frame(LullwaterInterior,type,location)
+
+#Fernbank dataset
+FernbankInterior <- read.csv("C:/Users/ckeogh/Documents/HOBOware/TempData2021/Aug/FernbankSlope_7.10.21_8-19-21.csv")
+type<-factor("Forest")
+location<-factor("Fernbank")
+fernF<- data.frame(FernbankInterior,type,location)
+
+
+##Concatenate all 4 datasets by row
+alldata <- as.data.frame(rbind(oacF, oacEdge,lullEdge,lullF,fernF))
+alldata$longdate<- as.Date(alldata$Date, format = "%Y - %m - %d")
+str(alldata)
+
+#https://rpubs.com/cgb-grupstra/moorea-hobo-20190314
+#IF need to separate time and date into 2 columns
+#hobotemplongdate <- tidyr::separate(hobotemp, 'date',
+  #                                  into = c('longdate', 'time'),
+  #                                  sep= ' ') 
+#head(hobotemplongdate)
+
+```
+
+## Plotting across dates 
+using code from https://rpubs.com/cgb-grupstra/moorea-hobo-20190314
+```{r echo=FALSE}
+
+ntempgraph <- ggplot(data=alldata, 
+    aes(x=longdate, 
+    y=TempF, colour=type)) +
+    geom_point(size=1, alpha = 1/10)+ theme_bw()+
+    facet_grid(type~location)+ 
+    theme(axis.text.x = element_text(angle=45, margin = margin(t=20, r=100)))+
+    labs(title="Raw temperature data", y="Temperature (°F)", x="Date")+
+    guides(x = guide_axis(angle=50))
+ntempgraph
+
+```
+
+
+```{r include=FALSE}
+
+#separating day/month/year 
+
+hobofull <- alldata %>%
+  tidyr::separate('longdate',
+                  into = c('year', 'month', 'day'),
+                  sep= '-',
+                  remove = FALSE)
+head(hobofull)
+```
+
+
+## Daily temps
+Calculating mean temp for each date
+```{r mean temps}
+hobofullmean <- hobofull %>%
+  group_by(year,month, day,type,location,longdate)%>%
+  summarise(meantemp = mean(TempF))
+
+head(hobofullmean)
+
+```
+
+## Plotting mean temps
+```{r echo=FALSE}
+
+hobofullmean$month <- factor(hobofullmean$month, levels=c("06", "07", "08"))
+meanplot <- ggplot(hobofullmean, aes(x=longdate, y=meantemp))+
+  geom_smooth(aes(colour=type))+
+    geom_point(aes(colour=type),alpha = 1/5)+
+  facet_grid(cols=vars(location))+
+    theme_bw()+
+    labs(title= "Daily temperature means", y="Daily mean temperature (°F) with 95% CI", x="Date")
+   
+    
+meanplot
+
+```
+
+## Calculating daily temp ranges and min/max
+```{r temp range}
+
+hobofullrange <- hobofull %>%
+  group_by(year, month, day, type, location, longdate)%>%
+  summarise(min_temp = min(TempF), max_temp = max(TempF))%>%
+  mutate(range = max_temp-min_temp)
+
+head(hobofullrange, digits=5)
+
+```
+
+## Plotting temp ranges
+```{r echo=FALSE}
+
+rangeplot <- ggplot(data=hobofullrange, 
+                   aes(x=longdate, 
+                       y=range, colour=type)) +
+  geom_point()+ theme_bw()+
+  theme(axis.text.x = element_text(margin = margin(t=5)))+
+  facet_grid(cols=vars(location))+
+  labs(title="Daily temperature range", y="Daily temperature range (°F) with 95% CI ", x="Date")
+
+rangeplot
+
+```
+
+## Plotting max and min
+```{r echo=FALSE}
+
+hobofullrange <- hobofull %>%
+  group_by(year, month, day, type, location, longdate)%>%
+  summarise(min_temp = min(TempF), max_temp = max(TempF))%>%
+ mutate(range = max_temp-min_temp)
+
+minmaxplot <- ggplot(hobofullrange, aes(x=longdate))+
+  geom_point(aes(y=min_temp,colour=type))+
+    geom_point(aes(y=max_temp,colour=type))+
+  facet_grid(cols=vars(location))+
+    theme_bw()+
+    labs(title= "Daily temperature Min/Max", y="Daily Max and Min temperature (°F) with 95% CI", x="Date")
+minmaxplot
+   
+#    geom_point(aes(colour=type),alpha = 1/5)+
+```
+
+## Boxplots - temps per moth by location and type
+median, 25%, 75%, and min and max
+```{r echo=FALSE}
+
+#hobofullrangemeans<- hobofullrange %>%
+#  group_by(year, month,type, location)%>%
+#  summarise(meanrange = mean(range))
+#nrow(hobofullrangemeans)
+
+hrmplot <- ggplot(hobofullmean, aes(x=month, y=meantemp))+
+  geom_boxplot(aes(fill=type)) + theme_bw()+
+  facet_grid(cols=vars(location))+
+  labs(title= "Monthly average temps", y="Temperature (°C)", x="Date")
+
+hrmplot
+
+```
+
+
