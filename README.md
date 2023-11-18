@@ -1,2 +1,2 @@
-# template
-default to start a new repo
+# Sensor data
+All the files associated with the ASC, COD, & Emory Senosr projects
