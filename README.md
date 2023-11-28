@@ -1,2 +1,2 @@
 # Sensor data
-All the files associated with the ASC, COD, & Emory Senosr projects
+All the files associated with the ASC, COD, & Emory Sensor projects
